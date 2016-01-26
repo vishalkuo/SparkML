@@ -1,0 +1,21 @@
+
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, Webstorm and Mac
+
+*.iml
+
+## Directory-based project format:
+.idea/
+# if you remove the above rule, at least ignore the following:
+
+
+#sbt
+target/
+lib_managed/
+src_managed/
+project/boot/
+.history
+.cache
+
+*.csv
+
+.DS_Store
