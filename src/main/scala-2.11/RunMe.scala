@@ -10,5 +10,7 @@ object RunMe {
   sc.setLogLevel("WARN")
   def main (args: Array[String]): Unit = {
     val u = new UserTransform(sc, sc.textFile("src/main/resources/datasets/ml-100k/u.user"))
+    val a = u.ageDistribution()
+    a.take(5).foreach(println)
   }
 }
