@@ -10,6 +10,16 @@ object RunMe {
   sc.setLogLevel("WARN")
   def main (args: Array[String]): Unit = {
     val u = new UserTransform(sc, sc.textFile("src/main/resources/datasets/ml-100k/u.user"))
+    val m = new MovieTransform(sc, sc.textFile("src/main/resources/datasets/ml-100k/u.item"))
 
+//    for (item <- m.getAgeAggregated.take(5)){
+//      print(s"${item._1} ${item._2}")
+//    }
+//
+//    for (item <- m.getYearsFilled.take(5)){
+//      println(item)
+//    }
+
+    m.years.take(5).foreach(println)
   }
 }

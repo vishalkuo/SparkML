@@ -15,11 +15,11 @@ class UserTransform(sc: SparkContext, rawFields: RDD[String]) {
   val occupationMap = occupationsIndexed.zipWithIndex.toMap
 
 
-  def getAgeDistribution(): RDD[(Int, Int)] = {
+  def getAgeDistribution: RDD[(Int, Int)] = {
     userFields.map(fields => (fields(1).toInt, 1)).reduceByKey((a, b) => a + b).sortBy(_._1)
   }
 
-  def getOccupationDistribution(): RDD[(String, Int)] = {
+  def getOccupationDistribution: RDD[(String, Int)] = {
     userFields.map(fields => (fields(3), 1)).reduceByKey(_ + _).sortBy(_._2)
   }
   
