@@ -12,8 +12,7 @@ object RunMe {
     val u = new UserTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.user"))
     val m = new MovieTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.item"))
     val o = new RatingTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.data"))
-    for (i <- o.userRatingsCount){
-      println(s"${i._1} ${i._2}")
-    }
+
+    val allTermsBroadcasted = sc.broadcast(m.allTerms)
   }
 }

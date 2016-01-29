@@ -1,3 +1,4 @@
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 
 /**
@@ -25,4 +26,12 @@ class MovieTransform(rawFields: RDD[String]) extends Serializable{
 
   val rawTitles = movieFields.map(fields => fields(1))
   val titleFiltered = rawTitles.map(title => title.replaceAll("\\((\\w+)\\)", ""))
+  val titleWords = titleFiltered.map(title => title.split(" "))
+  val allTerms = titleWords.flatMap(x => x).distinct().zipWithIndex().collectAsMap()
+
+//  def getVectors(broadcast: Broadcast[Map[String,Long]]): Any = {
+//    titleWords.map(terms => ())
+//  }
+
+//  def createVector(terms: Array[String], termDict: Map[String, Long])
 }
