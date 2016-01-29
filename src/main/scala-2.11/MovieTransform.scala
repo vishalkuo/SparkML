@@ -5,6 +5,7 @@ import org.apache.spark.rdd.RDD
   */
 class MovieTransform(rawFields: RDD[String]) extends Serializable{
   val movieFields = rawFields.map(lines => lines.split("\\|"))
+  val numMovies = movieFields.count()
   val years = movieFields.map(fields => fields(2)).map({
     field => try{
       field.substring(field.length - 4).toInt
@@ -18,11 +19,10 @@ class MovieTransform(rawFields: RDD[String]) extends Serializable{
 
   val yearsFilled = years.map(x => if (x == 1900) yearsMean else x)
 
-
-
-
-
   def getAgeAggregated: Array[(Double, Long)] = {
     yearsFilled.map(x => 1998 - x).countByValue().toArray.sortBy(_._1)
   }
+
+  val rawTitles = movieFields.map(fields => fields(1))
+  val titleFiltered = rawTitles.map(title => title.replaceAll("\\((\\w+)\\)", ""))
 }

@@ -1,5 +1,5 @@
 import org.apache.spark.{SparkContext, SparkConf}
-import RatingTransform._
+
 /**
   * Created by vishalkuo on 2016-01-26.
   */
@@ -11,6 +11,9 @@ object RunMe {
   def main (args: Array[String]): Unit = {
     val u = new UserTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.user"))
     val m = new MovieTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.item"))
-
+    val o = new RatingTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.data"))
+    for (i <- o.userRatingsCount){
+      println(s"${i._1} ${i._2}")
+    }
   }
 }
