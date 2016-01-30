@@ -1,3 +1,6 @@
+import breeze.linalg.{normalize, SparseVector}
+import org.apache.spark
+import org.apache.spark.broadcast
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 
@@ -29,9 +32,18 @@ class MovieTransform(rawFields: RDD[String]) extends Serializable{
   val titleWords = titleFiltered.map(title => title.split(" "))
   val allTerms = titleWords.flatMap(x => x).distinct().zipWithIndex().collectAsMap()
 
-//  def getVectors(broadcast: Broadcast[Map[String,Long]]): Any = {
-//    titleWords.map(terms => ())
-//  }
+  def getVectors(broadcast: Broadcast[scala.collection.Map[java.lang.String,Long]]): RDD[SparseVector[Int]] = {
+    titleWords.map(terms => createVector(terms, broadcast.value))
+  }
 
-//  def createVector(terms: Array[String], termDict: Map[String, Long])
+  def createVector(terms: Array[String], termDict: scala.collection.Map[String, Long]): SparseVector[Int] = {
+    val numTerms = termDict.count(x => true)
+    val vec = SparseVector.zeros[Int](numTerms)
+    for (term <- terms){
+      if (termDict.get(term).isDefined){
+        vec(termDict.get(term).get.toInt) = 1
+      }
+    }
+    normalize(vec)
+  }
 }

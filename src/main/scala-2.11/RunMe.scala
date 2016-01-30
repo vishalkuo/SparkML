@@ -1,3 +1,4 @@
+import breeze.linalg.norm
 import org.apache.spark.{SparkContext, SparkConf}
 
 /**
@@ -14,5 +15,7 @@ object RunMe {
     val o = new RatingTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.data"))
 
     val allTermsBroadcasted = sc.broadcast(m.allTerms)
+    val t = m.getVectors(allTermsBroadcasted)
+    println(t.first())
   }
 }

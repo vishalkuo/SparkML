@@ -6,7 +6,14 @@ scalaVersion := "2.11.7"
 
 
 libraryDependencies  ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.0"
+  "org.apache.spark" %% "spark-core" % "1.6.0",
+  // other dependencies here
+  "org.scalanlp" %% "breeze" % "0.12",
+  // native libraries are not included by default. add this if you want them (as of 0.7)
+  // native libraries greatly improve performance, but increase jar sizes.
+  // It also packages various blas implementations, which have licenses that may or may not
+  // be compatible with the Apache License. No GPL code, as best I know.
+  "org.scalanlp" %% "breeze-natives" % "0.12"
 )
 
 resolvers ++= Seq(
