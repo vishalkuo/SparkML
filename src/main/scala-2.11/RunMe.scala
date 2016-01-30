@@ -1,4 +1,4 @@
-import breeze.linalg.norm
+import org.apache.spark.mllib.recommendation.ALS
 import org.apache.spark.{SparkContext, SparkConf}
 
 /**
@@ -6,7 +6,7 @@ import org.apache.spark.{SparkContext, SparkConf}
   */
 object RunMe {
   val conf = new SparkConf()
-    .setMaster("local[2]").setAppName("Movie Lens Recommender").set("spark.executor.memory", "1g")
+    .setMaster("local[2]").setAppName("Movie Lens Recommender").set("spark.executor.memory", "4g")
   val sc = new SparkContext(conf)
   sc.setLogLevel("WARN")
   def main (args: Array[String]): Unit = {
@@ -14,8 +14,8 @@ object RunMe {
     val m = new MovieTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.item"))
     val o = new RatingTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.data"))
 
-    val allTermsBroadcasted = sc.broadcast(m.allTerms)
-    val t = m.getVectors(allTermsBroadcasted)
-    println(t.first())
+
+    val extractedFields = o.ratingFields.map(x => x.take(3))
+
   }
 }

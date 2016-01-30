@@ -1,7 +1,7 @@
 import breeze.linalg.{normalize, SparseVector}
-import org.apache.spark
-import org.apache.spark.broadcast
+import breeze.linalg.normalize
 import org.apache.spark.broadcast.Broadcast
+//import org.apache.spark.mllib.linalg.SparseVector
 import org.apache.spark.rdd.RDD
 
 /**
