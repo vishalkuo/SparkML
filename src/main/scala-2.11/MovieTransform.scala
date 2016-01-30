@@ -32,13 +32,13 @@ class MovieTransform(rawFields: RDD[String]) extends Serializable{
   val titleWords = titleFiltered.map(title => title.split(" "))
   val allTerms = titleWords.flatMap(x => x).distinct().zipWithIndex().collectAsMap()
 
-  def getVectors(broadcast: Broadcast[scala.collection.Map[java.lang.String,Long]]): RDD[SparseVector[Int]] = {
+  def getVectors(broadcast: Broadcast[scala.collection.Map[java.lang.String,Long]]): RDD[SparseVector[Double]] = {
     titleWords.map(terms => createVector(terms, broadcast.value))
   }
 
-  def createVector(terms: Array[String], termDict: scala.collection.Map[String, Long]): SparseVector[Int] = {
+  def createVector(terms: Array[String], termDict: scala.collection.Map[String, Long]): SparseVector[Double] = {
     val numTerms = termDict.count(x => true)
-    val vec = SparseVector.zeros[Int](numTerms)
+    val vec = SparseVector.zeros[Double](numTerms)
     for (term <- terms){
       if (termDict.get(term).isDefined){
         vec(termDict.get(term).get.toInt) = 1
