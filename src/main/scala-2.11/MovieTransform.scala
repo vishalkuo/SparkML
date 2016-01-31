@@ -10,6 +10,7 @@ import org.apache.spark.rdd.RDD
 class MovieTransform(rawFields: RDD[String]) extends Serializable{
   val movieFields = rawFields.map(lines => lines.split("\\|"))
   val numMovies = movieFields.count()
+  val idString = movieFields.map(fields => (fields(0).toInt, fields(1))).collectAsMap()
   val years = movieFields.map(fields => fields(2)).map({
     field => try{
       field.substring(field.length - 4).toInt
