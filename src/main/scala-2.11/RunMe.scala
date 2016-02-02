@@ -39,8 +39,11 @@ object RunMe {
       x => x._2
     })
 
-    println(topSimilarities.take(10).map(x => (m.idString(x._1), x._2)).mkString("\n"))
+//    println(topSimilarities.take(10).map(x => (m.idString(x._1), x._2)).mkString("\n"))
 
+    val MSE = calculateMSE(ratingRDD, model)
+    println("Mean Squared Error: " + MSE)
+    println("RMS Error: " + math.sqrt(MSE))
   }
 
   //Produce a rating object with userid, movieid, and actual raitng
@@ -66,4 +69,21 @@ object RunMe {
     println("Watched: ")
     topTen.map(rating => (m.idString(rating.product), rating.rating)).foreach(println)
   }
+  //Mean squared error
+  def calculateMSE(ratings: RDD[Rating], model: MatrixFactorizationModel): Double = {
+    val userProd = ratings.map({
+      case Rating(user, product, rating) => (user, product)
+    })
+    val predictions = model.predict(userProd).map({
+      case Rating(user, product, rating) => ((user, product), rating)
+    })
+    val ratingPredAggregate = ratings.map({
+      case Rating(user, prod, rating) => ((user, prod), rating)
+    }).join(predictions)
+    val MSE = ratingPredAggregate.map({
+      case ((user, product), (act, pred)) => math.pow(act - pred, 2)
+    }).reduce(_ + _) / ratingPredAggregate.count()
+    MSE
+  }
+
 }
