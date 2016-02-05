@@ -85,5 +85,22 @@ object RunMe {
     }).reduce(_ + _) / ratingPredAggregate.count()
     MSE
   }
+  //Average Precision at K
+  def APK(actual: Seq[Int], predictions: Seq[Int], kVal: Int) : Double = {
+    val predictedK = predictions.take(kVal)
+    var score = 0.0
+    var matches = 0.0
+    for ((prediction, index) <- predictedK.zipWithIndex){
+      if (actual.contains(prediction)){
+        matches += 1.0
+        score += matches / (index.toDouble + 1.0)
+      }
+    }
+    if (actual.isEmpty) {
+      1.0
+    } else{
+      score / math.min(actual.size, kVal).toDouble
+    }
+  }
 
 }
