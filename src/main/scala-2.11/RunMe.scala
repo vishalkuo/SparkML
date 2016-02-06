@@ -1,4 +1,4 @@
-import breeze.linalg.{norm, DenseVector}
+import breeze.linalg.{DenseMatrix, norm, DenseVector}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, ALS, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
@@ -15,13 +15,13 @@ object RunMe {
     val u = new UserTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.user"))
     val m = new MovieTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.item"))
     val o = new RatingTransform(sc.textFile("src/main/resources/datasets/ml-100k/u.data"))
-
+    val rank = 50
     //Drop the timestamp field from rating
     val extractedFields = o.ratingFields.map(x => x.take(3))
     //Convert extracted fields into RDD of rating objects and train
     val ratingRDD = produceRating(extractedFields)
-    val model = ALS.train(ratingRDD, 50, 10, 0.01)
-    val userId = 200
+    val model = ALS.train(ratingRDD, rank, 10, 0.01)
+    val userId = 789
     val nReccomendations = 10
     val topTen = model.recommendProducts(userId, nReccomendations)
 //    outputTop(ratingRDD, userId, topTen, m)
@@ -42,8 +42,45 @@ object RunMe {
 //    println(topSimilarities.take(10).map(x => (m.idString(x._1), x._2)).mkString("\n"))
 
     val MSE = calculateMSE(ratingRDD, model)
-    println("Mean Squared Error: " + MSE)
-    println("RMS Error: " + math.sqrt(MSE))
+//    outputMSE(MSE)
+
+    val movies = movieForUser(ratingRDD, userId).map(_.product)
+    val apkForUser = APK(movies, topTen.map(_.product), 10)
+//    println(apkForUser)
+
+    //Calculate MAPK
+    val allItemFactors = model.productFeatures.map({
+      case(id, factor) => factor
+    }).collect()
+//    val itemMatrix = DenseMatrix(allItemFactors)
+    val itemMatrix = DenseMatrix.zeros[Double](m.numMovies.toInt, rank)
+    for (arr <- allItemFactors.zipWithIndex){
+      for (innerArr <- arr._1.zipWithIndex){
+        itemMatrix(arr._2, innerArr._2) = innerArr._1
+      }
+    }
+
+    val itemMatrixBcast = sc.broadcast(itemMatrix)
+
+    val allItemRecommendations = model.userFeatures.map({ case(id, featureArray) =>
+        val userVector = DenseVector(featureArray)
+        val scores = itemMatrixBcast.value * userVector
+        val sortedScoreZip  = scores.data.zipWithIndex.sortBy(-_._1)
+        val recommendedIds = sortedScoreZip.map(_._2 + 1).toSeq
+        (userId, recommendedIds)
+    })
+
+    val userMovies = ratingRDD.map({case Rating(user, product, rating) =>
+      (user, product)
+    }).groupBy({
+      case(user, product) => user
+    })
+
+    val MAPK = allItemRecommendations.join(userMovies).map{ case(id, (recommendedIds, actualIds)) =>
+        val actualPrediction = actualIds.map(_._2).toSeq
+        APK(actualPrediction, recommendedIds, nReccomendations)
+    }.reduce(_ + _) / allItemRecommendations.count()
+    println(s"Mean average precision at $nReccomendations: $MAPK")
   }
 
   //Produce a rating object with userid, movieid, and actual raitng
@@ -85,6 +122,16 @@ object RunMe {
     }).reduce(_ + _) / ratingPredAggregate.count()
     MSE
   }
+
+  def outputMSE(MSE: Double) = {
+    println("Mean Squared Error: " + MSE)
+    println("RMS Error: " + math.sqrt(MSE))
+  }
+
+  def movieForUser(ratingRDD: RDD[Rating], userId: Int): Seq[Rating] = {
+    ratingRDD.keyBy(_.user).lookup(userId).sortBy(-_.rating)
+  }
+
   //Average Precision at K
   def APK(actual: Seq[Int], predictions: Seq[Int], kVal: Int) : Double = {
     val predictedK = predictions.take(kVal)
@@ -102,5 +149,4 @@ object RunMe {
       score / math.min(actual.size, kVal).toDouble
     }
   }
-
 }
