@@ -19,3 +19,5 @@ project/boot/
 *.csv
 
 .DS_Store
+
+out/
