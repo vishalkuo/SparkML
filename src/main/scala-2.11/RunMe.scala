@@ -1,4 +1,5 @@
 import breeze.linalg.{DenseMatrix, norm, DenseVector}
+import org.apache.spark.mllib.evaluation.{RankingMetrics, RegressionMetrics}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, ALS, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
@@ -80,7 +81,11 @@ object RunMe {
         val actualPrediction = actualIds.map(_._2).toSeq
         APK(actualPrediction, recommendedIds, nReccomendations)
     }.reduce(_ + _) / allItemRecommendations.count()
-    println(s"Mean average precision at $nReccomendations: $MAPK")
+    //println(s"Mean average precision at $nReccomendations: $MAPK")
+
+    //Spark's MSE
+//    outputSparkMSE(ratingRDD, model)
+    outputSparkMAP(allItemRecommendations, userMovies)
   }
 
   //Produce a rating object with userid, movieid, and actual raitng
@@ -149,4 +154,30 @@ object RunMe {
       score / math.min(actual.size, kVal).toDouble
     }
   }
+
+  def outputSparkMSE(ratingRDD: RDD[Rating], model: MatrixFactorizationModel) = {
+    val userProd = ratingRDD.map({
+      case Rating(user, product, rating) => (user, product)
+    })
+    val predictions = model.predict(userProd).map({
+      case Rating(user, product, rating) => ((user, product), rating)
+    })
+    val ratingPredAgg = ratingRDD.map({
+      case Rating(user, prod, rating) => ((user, prod), rating)
+    }).join(predictions).map({ case((user, product), (predicted, actual))
+      => (predicted, actual)
+    })
+    val regMet = new RegressionMetrics(ratingPredAgg)
+    println(s"Mean Squared Error = ${regMet.meanSquaredError}")
+    println(s"Root Mean Squared Error = ${regMet.rootMeanSquaredError}")
+  }
+  //Mean average precision
+  def outputSparkMAP(allRecs: RDD[(Int, Seq[Int])], userMovies: RDD[(Int, Iterable[(Int, Int)])] ) = {
+    val predictedActualAgg = allRecs.join(userMovies).map{ case(id, (predicted, actualZipId)) =>
+      (predicted.toArray, actualZipId.map(_._2).toArray)
+    }
+    val rankingMetrics = new RankingMetrics(predictedActualAgg)
+    println(s"MAP = " + rankingMetrics.meanAveragePrecision)
+  }
 }
+
