@@ -21,3 +21,11 @@ project/boot/
 .DS_Store
 
 out/
+
+
+# Gradle
+ /gradle/
+ .gradle/
+ /gradlew*
+ build/
+ deploy

@@ -6,8 +6,8 @@ scalaVersion := "2.11.7"
 
 
 libraryDependencies  ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.0" % "provided",
-  "org.apache.spark" %% "spark-mllib" % "1.6.0" % "provided",
+  "org.apache.spark" %% "spark-core" % "1.6.0",
+  "org.apache.spark" %% "spark-mllib" % "1.6.0",
   // other dependencies here
   "org.scalanlp" %% "breeze" % "0.12",
   // native libraries are not included by default. add this if you want them (as of 0.7)

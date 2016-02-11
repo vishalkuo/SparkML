@@ -8,8 +8,7 @@ import org.apache.spark.{SparkContext, SparkConf}
   * Created by vishalkuo on 2016-01-26.
   */
 object RunMe {
-  val conf = new SparkConf()
-    .setMaster("local[2]").setAppName("Movie Lens Recommender").set("spark.executor.memory", "3g")
+  val conf = new SparkConf().setMaster("local[2]").setAppName("Movie Lens Recommender").set("spark.executor.memory", "3g")
   val sc = new SparkContext(conf)
   sc.setLogLevel("WARN")
   def main (args: Array[String]): Unit = {
