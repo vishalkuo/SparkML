@@ -24,8 +24,8 @@ out/
 
 
 # Gradle
- /gradle/
- .gradle/
- /gradlew*
- build/
- deploy
+/gradle/
+.gradle/
+/gradlew*
+build/
+deploy
