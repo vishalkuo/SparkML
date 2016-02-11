@@ -1,0 +1,56 @@
+group 'mlr'
+version '0.0.1'
+
+apply plugin: 'scala'
+apply plugin:'java'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+def base_name = 'mlr'
+def deploy_destination = "/deploy/"
+
+project.ext {
+    scalaVersion = '2.10.6'
+}
+
+repositories{
+    mavenCentral()
+    mavenLocal()
+    maven{
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+    maven {
+        url "https://oss.sonatype.org/content/repositories/releases/"
+    }
+}
+
+
+buildscript {
+    repositories { jcenter() }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.2'
+    }
+}
+
+dependencies {
+    compile "org.apache.spark:spark-core_2.10:1.6.0"
+    compile "org.apache.spark:spark-mllib_2.10:1.6.0"
+    compile "org.scalanlp:breeze_2.10:0.12"
+    compile "org.scalanlp:breeze-natives_2.10:0.12"
+}
+
+shadowJar {
+    zip64 = true
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+}
+
+task zip(dependsOn:[assemble]) << {
+    println "Done."
+}
+
+task copyDeploymentJar(type:Copy) {
+    from(projectDir.path + '/build/')
+    into(projectDir.path)
+    include "${base_name}*"
+}
+
+defaultTasks 'clean','zip'
