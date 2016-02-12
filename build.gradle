@@ -14,7 +14,6 @@ project.ext {
 
 repositories{
     mavenCentral()
-    mavenLocal()
     maven{
         url "https://oss.sonatype.org/content/repositories/snapshots/"
     }
@@ -23,7 +22,6 @@ repositories{
     }
 }
 
-
 buildscript {
     repositories { jcenter() }
     dependencies {
@@ -31,9 +29,19 @@ buildscript {
     }
 }
 
+
+configurations {
+    provided
+}
+
+sourceSets {
+    main { compileClasspath += configurations.provided }
+}
+
 dependencies {
-    compile "org.apache.spark:spark-core_2.10:1.6.0"
-    compile "org.apache.spark:spark-mllib_2.10:1.6.0"
+    provided "org.scala-lang:scala-library:2.10.6"
+    provided "org.apache.spark:spark-core_2.10:1.6.0"
+    provided "org.apache.spark:spark-mllib_2.10:1.6.0"
     compile "org.scalanlp:breeze_2.10:0.12"
     compile "org.scalanlp:breeze-natives_2.10:0.12"
 }
@@ -41,16 +49,28 @@ dependencies {
 shadowJar {
     zip64 = true
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    baseName "$base_name"
 }
 
-task zip(dependsOn:[assemble]) << {
+task copyShadowJar(type:Copy, dependsOn: shadowJar) {
+    println projectDir.path + " COPYING"
+    from(projectDir.path + '/build/libs/')
+    into(projectDir.path + deploy_destination)
+    include '*.jar'
+}
+
+
+task createDeploymentBundle(type: Zip, dependsOn: copyShadowJar){
+    destinationDir = file(projectDir.path + deploy_destination)
+    archiveName "${base_name}.zip"
+    from file(projectDir.path + deploy_destination)
+    include '*.jar'
+}
+
+
+task zip(dependsOn:[createDeploymentBundle]) << {
     println "Done."
 }
 
-task copyDeploymentJar(type:Copy) {
-    from(projectDir.path + '/build/')
-    into(projectDir.path)
-    include "${base_name}*"
-}
 
 defaultTasks 'clean','zip'
