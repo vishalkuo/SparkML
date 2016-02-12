@@ -39,20 +39,19 @@ object RunMe {
       x => x._2
     })
 
-//    println(topSimilarities.take(10).map(x => (m.idString(x._1), x._2)).mkString("\n"))
+    println(topSimilarities.take(10).map(x => (m.idString(x._1), x._2)).mkString("\n"))
 
     val MSE = calculateMSE(ratingRDD, model)
-//    outputMSE(MSE)
+    outputMSE(MSE)
 
     val movies = movieForUser(ratingRDD, userId).map(_.product)
     val apkForUser = APK(movies, topTen.map(_.product), 10)
-//    println(apkForUser)
+    println(apkForUser)
 
     //Calculate MAPK
     val allItemFactors = model.productFeatures.map({
       case(id, factor) => factor
     }).collect()
-//    val itemMatrix = DenseMatrix(allItemFactors)
     val itemMatrix = DenseMatrix.zeros[Double](m.numMovies.toInt, rank)
     for (arr <- allItemFactors.zipWithIndex){
       for (innerArr <- arr._1.zipWithIndex){
@@ -80,10 +79,10 @@ object RunMe {
         val actualPrediction = actualIds.map(_._2).toSeq
         APK(actualPrediction, recommendedIds, nReccomendations)
     }.reduce(_ + _) / allItemRecommendations.count()
-    //println(s"Mean average precision at $nReccomendations: $MAPK")
+    println(s"Mean average precision at $nReccomendations: $MAPK")
 
     //Spark's MSE
-//    outputSparkMSE(ratingRDD, model)
+    outputSparkMSE(ratingRDD, model)
     outputSparkMAP(allItemRecommendations, userMovies)
   }
 
