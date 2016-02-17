@@ -1,4 +1,7 @@
-import org.apache.spark.mllib.classification.{NaiveBayes, SVMWithSGD, LogisticRegressionWithSGD}
+import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.spark.mllib.classification
+import org.apache.spark.mllib.classification.{SVMModel, NaiveBayes, SVMWithSGD, LogisticRegressionWithSGD}
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.tree.DecisionTree
@@ -31,26 +34,41 @@ object Classification {
       LabeledPoint(classifiedVal, Vectors.dense(features))
     }
     val naiveBayesData = cleansedData.map { case (label, feature) =>
-      feature.map(x => if (x < 0) 0 else x)
-      LabeledPoint(label, Vectors.dense(feature))
+      val positiveFeature = feature.map(x => if (x < 0) 0 else x)
+      LabeledPoint(label, Vectors.dense(positiveFeature))
     }
     mllibData.cache()
+//    naiveBayesData.cache()
+//    naiveBayes(naiveBayesData)
+
+    val logReg = logisticRegression(mllibData)
+    val svmModel = svm(mllibData)
+
+    val comparison = Seq(logReg, svmModel).map{case model =>
+      val accAndCategory = mllibData.map{case point =>
+        (model.predict(point.features),  point.label)
+      }
+      val metric = new BinaryClassificationMetrics(accAndCategory)
+      (model.getClass.getSimpleName, metric.areaUnderPR(), metric.areaUnderROC())
+    }
   }
 
-  def logisticRegression(data: RDD[LabeledPoint])= {
+  def logisticRegression(data: RDD[LabeledPoint]): classification.LogisticRegressionModel= {
     val model = LogisticRegressionWithSGD.train(data,iterations)
     val correctCount = data.map(lPoint =>
     if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
     val acc = correctCount / data.count()
     println(acc)
+    model
   }
 
-  def svm(data: RDD[LabeledPoint]) = {
+  def svm(data: RDD[LabeledPoint]): SVMModel = {
     val model = SVMWithSGD.train(data, iterations)
     val correctCount = data.map(lPoint =>
       if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
     val acc = correctCount / data.count()
     println(acc)
+    model
   }
 
   def naiveBayes(data: RDD[LabeledPoint]) = {
