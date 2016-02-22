@@ -1,12 +1,12 @@
-import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.mllib.classification
-import org.apache.spark.mllib.classification.{SVMModel, NaiveBayes, SVMWithSGD, LogisticRegressionWithSGD}
+import org.apache.spark.mllib.classification._
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.tree.DecisionTree
 import org.apache.spark.mllib.tree.configuration.Algo
 import org.apache.spark.mllib.tree.impurity.Entropy
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
@@ -37,20 +37,15 @@ object Classification {
       val positiveFeature = feature.map(x => if (x < 0) 0 else x)
       LabeledPoint(label, Vectors.dense(positiveFeature))
     }
-    mllibData.cache()
-//    naiveBayesData.cache()
+//    mllibData.cache()
+    naiveBayesData.cache()
 //    naiveBayes(naiveBayesData)
 
-    val logReg = logisticRegression(mllibData)
-    val svmModel = svm(mllibData)
-
-    val comparison = Seq(logReg, svmModel).map{case model =>
-      val accAndCategory = mllibData.map{case point =>
-        (model.predict(point.features),  point.label)
-      }
-      val metric = new BinaryClassificationMetrics(accAndCategory)
-      (model.getClass.getSimpleName, metric.areaUnderPR(), metric.areaUnderROC())
-    }
+//    val logReg = logisticRegression(mllibData)
+//    val svmModel = svm(mllibData)
+//    val comp = lrSVMComparison(logReg, svmModel, mllibData)
+    val nb = naiveBayes(naiveBayesData)
+    naiveBayesMetrics(nb, naiveBayesData)
   }
 
   def logisticRegression(data: RDD[LabeledPoint]): classification.LogisticRegressionModel= {
@@ -71,20 +66,57 @@ object Classification {
     model
   }
 
-  def naiveBayes(data: RDD[LabeledPoint]) = {
+  def naiveBayes(data: RDD[LabeledPoint]): NaiveBayesModel = {
     val model = NaiveBayes.train(data)
     val correctCount = data.map(lPoint =>
       if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
     val acc = correctCount / data.count()
     println(acc)
+    model
   }
 
-  def decisionTree(data: RDD[LabeledPoint]) = {
+  def decisionTree(data: RDD[LabeledPoint]): DecisionTreeModel = {
     val model = DecisionTree.train(data, Algo.Classification, Entropy, treeDepth)
     val correctCount = data.map(lPoint =>
       if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
     val acc = correctCount / data.count()
     println(acc)
+    model
+  }
+
+  def lrSVMComparison(logReg: classification.LogisticRegressionModel, svmModel: SVMModel, mllibData: RDD[LabeledPoint]):
+  Seq[(String, Double, Double)] = {
+    val comparison = Seq(logReg, svmModel).map{case model =>
+      val accAndCategory = mllibData.map{case point =>
+        (model.predict(point.features),  point.label)
+      }
+      val metric = new BinaryClassificationMetrics(accAndCategory)
+      (model.getClass.getSimpleName, metric.areaUnderPR(), metric.areaUnderROC())
+    }
+    comparison
+  }
+
+  def naiveBayesMetrics(nb: NaiveBayesModel, nbData: RDD[LabeledPoint]):Seq[(String, Double, Double)] = {
+    val comparison = Seq(nb).map({case model =>
+        val accAndCategory = nbData.map({ case point =>
+          (model.predict(point.features), point.label)
+        })
+        val met = new BinaryClassificationMetrics(accAndCategory)
+      (model.getClass.getSimpleName, met.areaUnderPR(), met.areaUnderROC())
+    })
+    comparison
+  }
+
+  def dTreeMetrics(dtModel: DecisionTreeModel, mllibData: RDD[LabeledPoint]): Seq[(String, Double, Double)] = {
+    val comparison = Seq(dtModel).map({case model =>
+        val accAndCategory = mllibData.map{case point =>
+          val res = model.predict(point.features)
+          (if (res > 0.5) 1.0 else 0, point.label)
+        }
+      val met = new BinaryClassificationMetrics(accAndCategory)
+      (model.getClass.getSimpleName, met.areaUnderPR(), met.areaUnderROC())
+    })
+    comparison
   }
 
 }
