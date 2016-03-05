@@ -1,7 +1,9 @@
+import org.apache.spark.mllib.feature.StandardScaler
 import org.apache.spark.mllib.classification
 import org.apache.spark.mllib.classification._
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.tree.DecisionTree
 import org.apache.spark.mllib.tree.configuration.Algo
@@ -37,15 +39,32 @@ object Classification {
       val positiveFeature = feature.map(x => if (x < 0) 0 else x)
       LabeledPoint(label, Vectors.dense(positiveFeature))
     }
-//    mllibData.cache()
+    mllibData.cache()
     naiveBayesData.cache()
-//    naiveBayes(naiveBayesData)
 
+//    naiveBayes(naiveBayesData)
 //    val logReg = logisticRegression(mllibData)
 //    val svmModel = svm(mllibData)
 //    val comp = lrSVMComparison(logReg, svmModel, mllibData)
-    val nb = naiveBayes(naiveBayesData)
-    naiveBayesMetrics(nb, naiveBayesData)
+//    val nb = naiveBayes(naiveBayesData)
+//    naiveBayesMetrics(nb, naiveBayesData)
+
+    val vectors = mllibData.map(labeledPoint => labeledPoint.features)
+    val matrix = new RowMatrix(vectors)
+    val summary = matrix.computeColumnSummaryStatistics()
+
+    val vectorScaler = new StandardScaler(withMean = true, withStd = true).fit(vectors)
+    val scaledData = mllibData.map(labeledPoint => LabeledPoint(labeledPoint.label,
+      vectorScaler.transform(labeledPoint.features)))
+
+    val logRegScaledModel = logisticRegression(scaledData)
+
+    val comparison = scaledData.map(point =>
+      (logRegScaledModel.predict(point.features), point.label))
+    val metrics = new BinaryClassificationMetrics(comparison)
+    val lrPR = metrics.areaUnderPR()
+    val lrRoc = metrics.areaUnderROC()
+    println(s"Area under PR: $lrPR, area under ROC: $lrRoc")
   }
 
   def logisticRegression(data: RDD[LabeledPoint]): classification.LogisticRegressionModel= {
@@ -53,7 +72,7 @@ object Classification {
     val correctCount = data.map(lPoint =>
     if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
     val acc = correctCount / data.count()
-    println(acc)
+    println(s"sum: $correctCount, acc: $acc")
     model
   }
 
