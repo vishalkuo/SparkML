@@ -11,6 +11,7 @@ import org.apache.spark.mllib.tree.impurity.Entropy
 import org.apache.spark.mllib.tree.model.DecisionTreeModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
+import shapeless.record
 
 
 /**
@@ -49,6 +50,44 @@ object Classification {
 //    val nb = naiveBayes(naiveBayesData)
 //    naiveBayesMetrics(nb, naiveBayesData)
 
+    val catMap = fields.map(field => field(3))
+      .distinct()
+      .collect()
+      .zipWithIndex
+      .toMap
+
+    val numCategories = catMap.size
+
+    val dataWithCategories  =fields.map({case record =>
+      val cleansed = record.map(_.replaceAll("\"", ""))
+      val label = cleansed(record.length - 1).toInt
+      val category = catMap(record(3))
+      val catVector = Array.ofDim[Double](numCategories)
+      catVector(category) = 1
+      val baseFeatures = cleansed.slice(4, record.length - 1).map(item => if (item.equals("?")) 0.0 else item.toDouble)
+      val allFeatures = catVector ++ baseFeatures
+      LabeledPoint(label, Vectors.dense(allFeatures))
+    })
+
+    val categoryScaler = new StandardScaler(withMean = true, withStd = true)
+      .fit(dataWithCategories.map(p => p.features))
+    val scaledCategorized = dataWithCategories.map(p =>
+      LabeledPoint(p.label, categoryScaler.transform(p.features))
+    )
+    logisticRegression(scaledCategorized)
+
+  }
+
+  def logisticRegression(data: RDD[LabeledPoint]): classification.LogisticRegressionModel= {
+    val model = LogisticRegressionWithSGD.train(data,iterations)
+    val correctCount = data.map(lPoint =>
+    if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
+    val acc = correctCount / data.count()
+    println(s"sum: $correctCount, acc: $acc")
+    model
+  }
+
+  def logRegWithScaling(mllibData: RDD[LabeledPoint]) = {
     val vectors = mllibData.map(labeledPoint => labeledPoint.features)
     val matrix = new RowMatrix(vectors)
     val summary = matrix.computeColumnSummaryStatistics()
@@ -66,16 +105,6 @@ object Classification {
     val lrRoc = metrics.areaUnderROC()
     println(s"Area under PR: $lrPR, area under ROC: $lrRoc")
   }
-
-  def logisticRegression(data: RDD[LabeledPoint]): classification.LogisticRegressionModel= {
-    val model = LogisticRegressionWithSGD.train(data,iterations)
-    val correctCount = data.map(lPoint =>
-    if (model.predict(lPoint.features) == lPoint.label) 1 else 0).sum
-    val acc = correctCount / data.count()
-    println(s"sum: $correctCount, acc: $acc")
-    model
-  }
-
   def svm(data: RDD[LabeledPoint]): SVMModel = {
     val model = SVMWithSGD.train(data, iterations)
     val correctCount = data.map(lPoint =>
